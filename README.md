@@ -82,7 +82,7 @@ DB_NAME=travel_photo_journey_orbitwick
 
 # JWT & Security
 JWT_SECRET=your_jwt_secret_key_change_in_production
-JWT_EXPIRES_IN=7d
+JWT_EXPIRES_IN=1h
 TWO_FACTOR_ENCRYPTION_KEY=your_32_character_aes_encryption_key
 
 # Brevo SMTP (Email Verification)
