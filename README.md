@@ -1,114 +1,388 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Travel Photo Journal - Backend API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+REST API for the Travel Photo Journal application. Built with NestJS, TypeORM, MySQL, and JWT authentication. Includes automated email verification via Brevo SMTP, Cloudinary media storage with per-user folder isolation, OpenRouter AI description summarization, and TOTP Two-Factor Authentication (2FA) with recovery codes.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+## Tech Stack
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- **Runtime & Framework**: Node.js (v20+ recommended, ESM), NestJS 12
+- **Database & ORM**: MySQL (via `mysql2`), TypeORM 1.1
+- **Authentication**: Passport JWT, bcryptjs, TOTP (`otpauth`), QR code generation (`qrcode`), AES-256-GCM secret encryption
+- **File Storage**: Cloudinary SDK (organized per-user folders)
+- **AI Integration**: OpenRouter API (`openrouter/free` or custom LLM)
+- **Email Delivery**: Nodemailer via Brevo SMTP
+- **Testing & Code Quality**: Vitest, Oxlint
 
-## Project setup
+---
 
-```bash
-$ npm install
+## Architecture Overview
+
+```
+src/
+├── ai/                     # OpenRouter AI summarization service
+├── auth/                   # Authentication, JWT strategy, TOTP 2FA, rate limiting
+│   ├── dto/                # Request validation schemas (DTOs)
+│   ├── guards/             # JwtAuthGuard
+│   ├── strategies/         # Passport JWT Strategy (blocks partial 2FA tokens)
+│   ├── auth.controller.ts
+│   ├── auth.service.ts
+│   └── two-factor.service.ts # AES-256-GCM encryption, QR codes, anti-replay
+├── cloudinary/             # Cloudinary upload/delete with user-scoped folders
+├── mail/                   # Brevo SMTP transport & verification email templates
+├── photos/                 # Photo journal CRUD with owner isolation & AI summary
+│   ├── dto/
+│   ├── entities/
+│   ├── photos.controller.ts
+│   └── photos.service.ts
+├── users/                  # User entity & MySQL repository queries
+│   ├── entities/
+│   └── users.service.ts
+├── app.module.ts           # Root module
+└── main.ts                 # Bootstrap with global validation pipe & CORS
 ```
 
-## Compile and run the project
+---
 
-```bash
-# development
-$ npm run start
+## Prerequisites
 
-# watch mode
-$ npm run start:dev
+1. **Node.js**: v20.x or v22.x/v24.x
+2. **MySQL**: Running instance (e.g. XAMPP MySQL, Docker, or native service on `127.0.0.1:3306`)
+3. **Cloudinary Account**: API key, secret, and cloud name
+4. **Brevo Account**: SMTP credentials for transactional verification emails
+5. **OpenRouter Account**: API key for travel description summarization
 
-# production mode
-$ npm run start:prod
+---
+
+## Getting Started
+
+### 1. Database Setup
+
+Create the database in MySQL:
+
+```sql
+CREATE DATABASE travel_photo_journey_orbitwick CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-## Run tests
+### 2. Environment Variables
 
-```bash
-# unit tests
-$ npm run test
+Create a `.env` file in the root directory:
 
-# e2e tests
-$ npm run test:e2e
+```env
+# Server
+PORT=3000
+NODE_ENV=development
 
-# test coverage
-$ npm run test:cov
+# MySQL Database
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=
+DB_NAME=travel_photo_journey_orbitwick
+
+# JWT & Security
+JWT_SECRET=your_jwt_secret_key_change_in_production
+JWT_EXPIRES_IN=7d
+TWO_FACTOR_ENCRYPTION_KEY=your_32_character_aes_encryption_key
+
+# Brevo SMTP (Email Verification)
+SMTP_HOST=smtp-relay.brevo.com
+SMTP_PORT=587
+SMTP_USER=your_brevo_login
+SMTP_PASS=your_brevo_smtp_key
+EMAIL_FROM="Travel Photo Journal <no-reply@yourdomain.com>"
+
+# Cloudinary Storage
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_cloudinary_api_key
+CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+
+# OpenRouter AI
+OPENROUTER_API_KEY=sk-or-v1-your_openrouter_api_key
+OPENROUTER_MODEL=openrouter/free
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### 3. Installation
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm install
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### 4. Running the Application
 
-## Observability
+```bash
+# Development (with file watcher)
+npm run start:dev
 
-In production applications, observability is essential for understanding how your system behaves, detecting issues early, and maintaining reliable performance.
+# Production build
+npm run build
+npm run start:prod
+```
 
-[NestJS Observe](https://observe.nestjs.com) automatically instruments your NestJS application, giving you deep visibility into your system with minimal setup:
+The server starts at `http://localhost:3000`.
 
-- **Distributed tracing:** Follow requests across services and understand how they flow through your system.
-- **Waterfall analysis:** Visualize request execution and identify slow operations, bottlenecks, and unexpected delays.
-- **Performance analysis:** Analyze application performance in real time and quickly pinpoint areas that need optimization.
-- **Metrics:** Track key application and infrastructure metrics to understand system health and performance trends.
-- **Logging:** Centralize and correlate logs with traces and other telemetry to make debugging easier.
-- **Error tracking:** Detect errors quickly and investigate their root causes with the surrounding context.
-- **SLA monitoring:** Track service-level objectives and identify when your application is approaching or exceeding defined thresholds.
-- **Alarms and alerts:** Set up alerts for critical errors, performance degradation, SLA violations, and other anomalies so your team can react quickly.
+---
 
-## Resources
+## API Reference
 
-Check out a few resources that may come in handy when working with NestJS:
+All requests accept and return `application/json` unless marked `multipart/form-data`. Protected routes require the `Authorization: Bearer <token>` header.
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Auto-instrument your application with [NestJS Observer](https://observer.nestjs.com). Distributed tracing, metrics, and logging made easy. Error tracking and performance monitoring for your NestJS applications.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+### 1. Authentication & Email Verification
 
-## Support
+#### Register
+- **`POST /auth/register`**
+- **Body**:
+  ```json
+  {
+    "name": "Jane Traveler",
+    "email": "jane@example.com",
+    "password": "Password123!"
+  }
+  ```
+- **Response (`201 Created`)**:
+  ```json
+  {
+    "message": "Registration successful. A 6-digit verification code has been sent to your email.",
+    "email": "jane@example.com",
+    "isEmailVerified": false
+  }
+  ```
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+#### Verify Email
+- **`POST /auth/verify-email`**
+- **Body**:
+  ```json
+  {
+    "email": "jane@example.com",
+    "code": "481029"
+  }
+  ```
+- **Rules**: 5-minute expiry, max 5 attempts before lockout. Token is intentionally not issued here; the user must log in after verification.
+- **Response (`200 OK`)**:
+  ```json
+  {
+    "message": "Email verified successfully. You can now log in.",
+    "email": "jane@example.com",
+    "isEmailVerified": true
+  }
+  ```
 
-## Stay in touch
+#### Resend Verification Code
+- **`POST /auth/resend-code`**
+- **Body**: `{ "email": "jane@example.com" }`
+- **Rules**: Enforces a strict 3-minute cooldown between requests.
+- **Response (`200 OK`)**:
+  ```json
+  {
+    "message": "A new 6-digit verification code has been sent to your email. It expires in 5 minutes."
+  }
+  ```
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+#### Login
+- **`POST /auth/login`**
+- **Body**:
+  ```json
+  {
+    "email": "jane@example.com",
+    "password": "Password123!"
+  }
+  ```
+- **Response (`200 OK`) - When 2FA is OFF**:
+  ```json
+  {
+    "message": "Login successful",
+    "token_type": "Bearer",
+    "access_token": "eyJhbGciOiJIUzI1Ni...",
+    "user": {
+      "id": 1,
+      "name": "Jane Traveler",
+      "email": "jane@example.com",
+      "bio": null,
+      "avatar": null
+    }
+  }
+  ```
+- **Response (`200 OK`) - When 2FA is ON (Strict Two-Step Flow)**:
+  ```json
+  {
+    "requires2fa": true,
+    "twoFactorToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "message": "Two-factor authentication required. Please provide your 6-digit authenticator code or a recovery code."
+  }
+  ```
 
-## License
+#### Get Current User Profile
+- **`GET /auth/profile`**
+- **Headers**: `Authorization: Bearer <access_token>`
+- **Response (`200 OK`)**: User details.
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+---
+
+### 2. Two-Factor Authentication (2FA / TOTP)
+
+#### Check 2FA Status
+- **`GET /auth/2fa/status`**
+- **Headers**: `Authorization: Bearer <access_token>`
+- **Response (`200 OK`)**:
+  ```json
+  {
+    "isTwoFactorEnabled": false
+  }
+  ```
+
+#### Generate 2FA Secret & QR Code
+- **`POST /auth/2fa/generate`**
+- **Headers**: `Authorization: Bearer <access_token>`
+- **Response (`200 OK`)**:
+  ```json
+  {
+    "secret": "JBSWY3DPEHPK3PXP",
+    "qrCodeUrl": "data:image/png;base64,iVBORw0KGgo...",
+    "otpauthUrl": "otpauth://totp/TravelPhotoJournal:jane%40example.com?issuer=TravelPhotoJournal&secret=JBSWY3DPEHPK3PXP&algorithm=SHA1&digits=6&period=30",
+    "message": "Scan this QR code in your authenticator app..."
+  }
+  ```
+
+#### Enable 2FA & Receive Recovery Codes
+- **`POST /auth/2fa/enable`**
+- **Headers**: `Authorization: Bearer <access_token>`
+- **Body**: `{ "code": "123456" }`
+- **Response (`200 OK`)**:
+  ```json
+  {
+    "message": "Two-factor authentication enabled successfully. Save your recovery codes in a safe place.",
+    "isTwoFactorEnabled": true,
+    "recoveryCodes": [
+      "A1B2-C3D4",
+      "E5F6-G7H8",
+      "I9J0-K1L2",
+      "M3N4-O5P6",
+      "Q7R8-S9T0",
+      "U1V2-W3X4",
+      "Y5Z6-A7B8",
+      "C9D0-E1F2"
+    ]
+  }
+  ```
+
+#### Authenticate 2FA Login Session
+- **`POST /auth/2fa/authenticate`**
+- **Body**:
+  ```json
+  {
+    "twoFactorToken": "eyJhbGciOiJIUzI1Ni...",
+    "code": "123456"
+  }
+  ```
+  *(Accepts either the current 6-digit TOTP code or an unconsumed recovery code like `"A1B2-C3D4"`)*
+- **Security Protections**:
+  - Max 5 failed attempts before 15-minute lockout.
+  - Anti-replay protection prevents reusing the same 6-digit code within the same 30-second window.
+  - Recovery codes are single-use and automatically removed from the database once redeemed.
+- **Response (`200 OK`)**: Standard login payload with the final `access_token`.
+
+#### Disable 2FA
+- **`POST /auth/2fa/disable`**
+- **Headers**: `Authorization: Bearer <access_token>`
+- **Body**:
+  ```json
+  {
+    "password": "Password123!",
+    "code": "123456"
+  }
+  ```
+- **Response (`200 OK`)**: `{ "message": "Two-factor authentication disabled successfully", "isTwoFactorEnabled": false }`
+
+---
+
+### 3. Travel Photos CRUD
+
+All `/photos` endpoints are strictly isolated by authenticated user (`req.user.id`). Users cannot view, modify, or delete photos owned by other users.
+
+#### List Current User's Photos
+- **`GET /photos`**
+- **Headers**: `Authorization: Bearer <access_token>`
+- **Response (`200 OK`)**: Array of photo objects ordered by `created_at DESC`.
+
+#### Upload Photo
+- **`POST /photos`**
+- **Headers**: `Authorization: Bearer <access_token>`
+- **Content-Type**: `multipart/form-data`
+- **Form Fields**:
+  - `name`: string (e.g. `"Sunrise over Mount Fuji"`)
+  - `location`: string (e.g. `"Fujikawaguchiko, Japan"`)
+  - `description`: string (e.g. `"Early morning hike up to Chureito Pagoda with clear views of Fuji's snowcap."`)
+  - `image`: binary file (JPEG, PNG, WebP, GIF)
+- **Automatic Background Processing**:
+  1. Uploads to Cloudinary in a dedicated user folder: `travel-photo-journal/user_<userId>/`.
+  2. Queries OpenRouter AI to generate a 1-2 sentence captivating summary from the description.
+  3. Saves record into MySQL with `ai_summary`.
+- **Response (`201 Created`)**:
+  ```json
+  {
+    "id": 1,
+    "name": "Sunrise over Mount Fuji",
+    "location": "Fujikawaguchiko, Japan",
+    "description": "Early morning hike up to Chureito Pagoda with clear views of Fuji's snowcap.",
+    "imageUrl": "https://res.cloudinary.com/.../travel-photo-journal/user_1/...jpg",
+    "cloudinaryPublicId": "travel-photo-journal/user_1/...",
+    "aiSummary": "Experience the tranquil early morning trek to Chureito Pagoda, taking in breathtaking views of Mount Fuji's pristine snowcap at dawn.",
+    "userId": 1,
+    "createdAt": "2026-10-27T01:00:00.000Z",
+    "updatedAt": "2026-10-27T01:00:00.000Z"
+  }
+  ```
+
+#### Get Photo Details
+- **`GET /photos/:id`**
+- **Headers**: `Authorization: Bearer <access_token>`
+- **Response (`200 OK`)**: Single photo object. Returns `404 Not Found` if photo does not exist or belongs to another user.
+
+#### Edit Photo
+- **`PUT /photos/:id`**
+- **Headers**: `Authorization: Bearer <access_token>`
+- **Content-Type**: `multipart/form-data` or `application/json` (if not updating image)
+- **Form Fields (all optional)**:
+  - `name`: string
+  - `location`: string
+  - `description`: string *(if provided, automatically re-generates `ai_summary` via OpenRouter)*
+  - `image`: binary file *(if provided, uploads new image and deletes the old Cloudinary asset)*
+- **Response (`200 OK`)**: Updated photo object with refreshed `aiSummary`.
+
+#### Delete Photo
+- **`DELETE /photos/:id`**
+- **Headers**: `Authorization: Bearer <access_token>`
+- **Action**: Deletes the Cloudinary image asset and deletes the MySQL database record.
+- **Response (`200 OK`)**:
+  ```json
+  {
+    "message": "Photo and its stored file deleted successfully"
+  }
+  ```
+
+---
+
+## Testing & Quality Assurance
+
+```bash
+# Run unit & integration test suites
+npm test
+
+# Run linter
+npm run lint
+
+# Compile TypeScript
+npm run build
+```
+
+---
+
+## Security Practices Implemented
+
+- **Password Hashing**: Salted bcrypt (10 rounds).
+- **TOTP Encryption**: Secrets encrypted at rest using AES-256-GCM.
+- **Token Segregation**: Temporary 2FA tickets (`type: '2fa_ticket'`) are blocked from calling protected business endpoints.
+- **Anti-Replay**: Step counter tracking prevents reusing 2FA tokens within the 30-second window.
+- **Recovery Hashing**: Single-use recovery codes stored as SHA-256 hashes.
+- **Rate-Limiting**: Verification codes & 2FA attempts lock out after 5 consecutive failures.
+- **Input Sanitization**: NestJS `ValidationPipe` with `whitelist: true` and `forbidNonWhitelisted: true`.
