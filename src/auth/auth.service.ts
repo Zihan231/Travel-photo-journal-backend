@@ -19,7 +19,7 @@ import { ResendCodeDto } from './dto/resend-code.dto.js';
 export class AuthService {
   private readonly MAX_ATTEMPTS = 5;
   private readonly CODE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
-  private readonly RESEND_COOLDOWN_MS = 3 * 60 * 1000; // 3 minutes
+  private readonly RESEND_COOLDOWN_MS = 60 * 1000; // 1 minute (60 seconds)
 
   constructor(
     private readonly usersService: UsersService,
@@ -219,14 +219,8 @@ export class AuthService {
         const remainingSeconds = Math.ceil(
           (this.RESEND_COOLDOWN_MS - elapsed) / 1000,
         );
-        const minutes = Math.floor(remainingSeconds / 60);
-        const seconds = remainingSeconds % 60;
-        const timeStr =
-          minutes > 0
-            ? `${minutes} minute(s) and ${seconds} second(s)`
-            : `${seconds} seconds`;
         throw new BadRequestException(
-          `Please wait ${timeStr} before requesting a new code.`,
+          `Please wait ${remainingSeconds} seconds before requesting a new code.`,
         );
       }
     }

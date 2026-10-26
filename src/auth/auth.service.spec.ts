@@ -288,12 +288,12 @@ describe('AuthService', () => {
   });
 
   describe('resendCode', () => {
-    it('should enforce 3-minute cooldown', async () => {
+    it('should enforce 1-minute cooldown', async () => {
       mockUsersService.findByEmailWithAuthDetails.mockResolvedValue({
         id: 1,
         email: 'test@example.com',
         isEmailVerified: false,
-        lastCodeSentAt: new Date(Date.now() - 60000), // only 1 minute ago (cooldown is 3 min)
+        lastCodeSentAt: new Date(Date.now() - 20000), // only 20 seconds ago (cooldown is 1 min)
       });
 
       await expect(
@@ -301,12 +301,12 @@ describe('AuthService', () => {
       ).rejects.toThrow(/Please wait/i);
     });
 
-    it('should allow resend after 3 minutes have elapsed', async () => {
+    it('should allow resend after 1 minute has elapsed', async () => {
       mockUsersService.findByEmailWithAuthDetails.mockResolvedValue({
         id: 1,
         email: 'test@example.com',
         isEmailVerified: false,
-        lastCodeSentAt: new Date(Date.now() - 185000), // 185 seconds ago (> 3 min)
+        lastCodeSentAt: new Date(Date.now() - 65000), // 65 seconds ago (> 1 min)
       });
 
       const result = await authService.resendCode({ email: 'test@example.com' });
