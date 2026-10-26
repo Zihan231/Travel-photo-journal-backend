@@ -35,6 +35,11 @@ export class UsersService {
         'user.codeExpiresAt',
         'user.verificationAttempts',
         'user.lastCodeSentAt',
+        'user.twoFactorSecret',
+        'user.twoFactorRecoveryCodes',
+        'user.twoFactorAttempts',
+        'user.twoFactorLockoutUntil',
+        'user.twoFactorLastStep',
       ])
       .where('user.email = :email', { email })
       .getOne();
@@ -42,6 +47,21 @@ export class UsersService {
 
   async findById(id: number): Promise<User | null> {
     return await this.userRepository.findOne({ where: { id } });
+  }
+
+  async findByIdWithTwoFactorDetails(id: number): Promise<User | null> {
+    return await this.userRepository
+      .createQueryBuilder('user')
+      .addSelect([
+        'user.password',
+        'user.twoFactorSecret',
+        'user.twoFactorRecoveryCodes',
+        'user.twoFactorAttempts',
+        'user.twoFactorLockoutUntil',
+        'user.twoFactorLastStep',
+      ])
+      .where('user.id = :id', { id })
+      .getOne();
   }
 
   async update(id: number, updateData: Partial<User>): Promise<void> {

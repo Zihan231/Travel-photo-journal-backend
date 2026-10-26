@@ -5,6 +5,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { UsersModule } from '../users/users.module.js';
 import { MailModule } from '../mail/mail.module.js';
 import { AuthService } from './auth.service.js';
+import { TwoFactorService } from './two-factor.service.js';
 import { AuthController } from './auth.controller.js';
 import { JwtStrategy } from './strategies/jwt.strategy.js';
 import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
@@ -36,7 +37,7 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, JwtAuthGuard],
-  exports: [AuthService, JwtAuthGuard, JwtModule],
+  providers: [AuthService, TwoFactorService, JwtStrategy, JwtAuthGuard],
+  exports: [AuthService, TwoFactorService, JwtAuthGuard, JwtModule],
 })
 export class AuthModule {}

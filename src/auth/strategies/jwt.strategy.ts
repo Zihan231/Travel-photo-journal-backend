@@ -7,6 +7,8 @@ import { UsersService } from '../../users/users.service.js';
 export interface JwtPayload {
   sub: number;
   email: string;
+  type?: string;
+  is2faPending?: boolean;
 }
 
 @Injectable()
@@ -31,6 +33,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: JwtPayload) {
+    if (payload.is2faPending || payload.type === '2fa_ticket') {
+      throw new UnauthorizedException(
+        'Two-factor authentication code required. This token cannot access protected endpoints.',
+      );
+    }
+
     const user = await this.usersService.findById(payload.sub);
     if (!user) {
       throw new UnauthorizedException('User no longer exists or token is invalid');

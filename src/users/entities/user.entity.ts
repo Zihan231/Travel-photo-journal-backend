@@ -65,6 +65,50 @@ export class User {
   })
   lastCodeSentAt: Date | null;
 
+  @Column({ type: 'boolean', default: false, name: 'is_two_factor_enabled' })
+  isTwoFactorEnabled: boolean;
+
+  @Column({
+    type: 'varchar',
+    length: 500,
+    nullable: true,
+    select: false,
+    name: 'two_factor_secret',
+  })
+  twoFactorSecret: string | null;
+
+  @Column({
+    type: 'simple-json',
+    nullable: true,
+    select: false,
+    name: 'two_factor_recovery_codes',
+  })
+  twoFactorRecoveryCodes: string[] | null;
+
+  @Column({
+    type: 'int',
+    default: 0,
+    select: false,
+    name: 'two_factor_attempts',
+  })
+  twoFactorAttempts: number;
+
+  @Column({
+    type: 'datetime',
+    nullable: true,
+    select: false,
+    name: 'two_factor_lockout_until',
+  })
+  twoFactorLockoutUntil: Date | null;
+
+  @Column({
+    type: 'bigint',
+    nullable: true,
+    select: false,
+    name: 'two_factor_last_step',
+  })
+  twoFactorLastStep: number | null;
+
   @OneToMany('Photo', 'user')
   photos: Relation<Photo[]>;
 
