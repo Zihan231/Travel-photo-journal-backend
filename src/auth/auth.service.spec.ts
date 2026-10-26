@@ -236,18 +236,19 @@ describe('AuthService', () => {
         codeExpiresAt: null,
         verificationAttempts: 0,
       });
-      expect(result).toHaveProperty('access_token', 'mock_jwt_token');
-      expect(result.user.isEmailVerified).toBe(true);
+      expect(result).not.toHaveProperty('access_token');
+      expect(result.isEmailVerified).toBe(true);
+      expect(result.message).toContain('You can now log in');
     });
   });
 
   describe('resendCode', () => {
-    it('should enforce 60-second cooldown', async () => {
+    it('should enforce 3-minute cooldown', async () => {
       mockUsersService.findByEmailWithAuthDetails.mockResolvedValue({
         id: 1,
         email: 'test@example.com',
         isEmailVerified: false,
-        lastCodeSentAt: new Date(Date.now() - 20000), // only 20 seconds ago
+        lastCodeSentAt: new Date(Date.now() - 60000), // only 1 minute ago (cooldown is 3 min)
       });
 
       await expect(
@@ -255,12 +256,12 @@ describe('AuthService', () => {
       ).rejects.toThrow(/Please wait/i);
     });
 
-    it('should allow resend after 60 seconds have elapsed', async () => {
+    it('should allow resend after 3 minutes have elapsed', async () => {
       mockUsersService.findByEmailWithAuthDetails.mockResolvedValue({
         id: 1,
         email: 'test@example.com',
         isEmailVerified: false,
-        lastCodeSentAt: new Date(Date.now() - 65000), // 65 seconds ago
+        lastCodeSentAt: new Date(Date.now() - 185000), // 185 seconds ago (> 3 min)
       });
 
       const result = await authService.resendCode({ email: 'test@example.com' });

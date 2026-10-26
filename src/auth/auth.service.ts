@@ -18,7 +18,7 @@ import { ResendCodeDto } from './dto/resend-code.dto.js';
 export class AuthService {
   private readonly MAX_ATTEMPTS = 5;
   private readonly CODE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
-  private readonly RESEND_COOLDOWN_MS = 60 * 1000; // 60 seconds
+  private readonly RESEND_COOLDOWN_MS = 3 * 60 * 1000; // 3 minutes
 
   constructor(
     private readonly usersService: UsersService,
@@ -170,19 +170,10 @@ export class AuthService {
       verificationAttempts: 0,
     });
 
-    const payload = { sub: user.id, email: user.email };
-    const accessToken = await this.jwtService.signAsync(payload);
-
     return {
-      message: 'Email verified successfully',
-      token_type: 'Bearer',
-      access_token: accessToken,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        isEmailVerified: true,
-      },
+      message: 'Email verified successfully. You can now log in.',
+      email: user.email,
+      isEmailVerified: true,
     };
   }
 
@@ -206,8 +197,14 @@ export class AuthService {
         const remainingSeconds = Math.ceil(
           (this.RESEND_COOLDOWN_MS - elapsed) / 1000,
         );
+        const minutes = Math.floor(remainingSeconds / 60);
+        const seconds = remainingSeconds % 60;
+        const timeStr =
+          minutes > 0
+            ? `${minutes} minute(s) and ${seconds} second(s)`
+            : `${seconds} seconds`;
         throw new BadRequestException(
-          `Please wait ${remainingSeconds} seconds before requesting a new code.`,
+          `Please wait ${timeStr} before requesting a new code.`,
         );
       }
     }
