@@ -6,7 +6,10 @@ import { AppService } from './app.service.js';
 import { UsersModule } from './users/users.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { MailModule } from './mail/mail.module.js';
+import { PhotosModule } from './photos/photos.module.js';
+import { CloudinaryModule } from './cloudinary/cloudinary.module.js';
 import { User } from './users/entities/user.entity.js';
+import { Photo } from './photos/entities/photo.entity.js';
 
 @Module({
   imports: [
@@ -67,7 +70,7 @@ import { User } from './users/entities/user.entity.js';
           username,
           password,
           database: cleanDbName,
-          entities: [User],
+          entities: [User, Photo],
           synchronize: true,
         };
       },
@@ -75,6 +78,8 @@ import { User } from './users/entities/user.entity.js';
     UsersModule,
     AuthModule,
     MailModule,
+    CloudinaryModule,
+    PhotosModule,
   ],
   controllers: [AppController],
   providers: [AppService],

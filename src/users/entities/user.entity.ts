@@ -4,7 +4,10 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
+  OneToMany,
+  type Relation,
 } from 'typeorm';
+import type { Photo } from '../../photos/entities/photo.entity.js';
 
 @Entity('users')
 export class User {
@@ -61,6 +64,9 @@ export class User {
     name: 'last_code_sent_at',
   })
   lastCodeSentAt: Date | null;
+
+  @OneToMany('Photo', 'user')
+  photos: Relation<Photo[]>;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
