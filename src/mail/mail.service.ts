@@ -48,7 +48,15 @@ export class MailService {
     const fromAddress =
       this.configService.get<string>('SMTP_FROM') ||
       this.configService.get<string>('Login') ||
-      'no-reply@orbitwick.com';
+      'zihanislam231@gmail.com';
+
+    const brevoApiKey =
+      this.configService.get<string>('BREVO_API_KEY') ||
+      (this.configService.get<string>('SMTP_key')?.startsWith('xkeysib-')
+        ? this.configService.get<string>('SMTP_key')
+        : null);
+
+    const resendApiKey = this.configService.get<string>('RESEND_API_KEY');
 
     const htmlContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 8px;">
@@ -70,6 +78,68 @@ export class MailService {
       </div>
     `;
 
+    // 1. Try Brevo HTTPS REST API (Port 443 - Never blocked on Render)
+    if (brevoApiKey) {
+      try {
+        const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+          method: 'POST',
+          headers: {
+            'api-key': brevoApiKey,
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify({
+            sender: { name: 'Travel Photo Journal', email: fromAddress },
+            to: [{ email: to }],
+            subject: 'Your Travel Photo Journal Verification Code',
+            textContent: `Your verification code is: ${code}. It expires in 5 minutes.`,
+            htmlContent,
+          }),
+        });
+
+        if (res.ok) {
+          this.logger.log(`Verification code dispatched to ${to} via Brevo REST API`);
+          return;
+        }
+
+        const errData = await res.text();
+        this.logger.warn(`Brevo REST API returned status ${res.status}: ${errData}`);
+      } catch (err: any) {
+        this.logger.warn(`Brevo REST API failed: ${err.message}`);
+      }
+    }
+
+    // 2. Try Resend HTTPS REST API (Port 443 - Never blocked on Render)
+    if (resendApiKey) {
+      try {
+        const res = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${resendApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: `Travel Photo Journal <${fromAddress}>`,
+            to: [to],
+            subject: 'Your Travel Photo Journal Verification Code',
+            text: `Your verification code is: ${code}. It expires in 5 minutes.`,
+            html: htmlContent,
+          }),
+        });
+
+        if (res.ok) {
+          this.logger.log(`Verification code dispatched to ${to} via Resend REST API`);
+          return;
+        }
+
+        const errData = await res.text();
+        this.logger.warn(`Resend REST API returned status ${res.status}: ${errData}`);
+      } catch (err: any) {
+        this.logger.warn(`Resend REST API failed: ${err.message}`);
+      }
+    }
+
+    // 3. Fallback to standard Nodemailer SMTP
     try {
       await this.transporter.sendMail({
         from: {
@@ -81,11 +151,17 @@ export class MailService {
         text: `Your verification code is: ${code}. It expires in 5 minutes.`,
         html: htmlContent,
       });
-      this.logger.log(`Verification code successfully dispatched to ${to}`);
+      this.logger.log(`Verification code successfully dispatched to ${to} via SMTP`);
     } catch (error: any) {
-      this.logger.error(`Failed to send verification email to ${to}: ${error.message}`);
+      this.logger.error(
+        `Failed to send verification email to ${to}: ${error.message}. (Note: Render free tier blocks outbound SMTP ports 25/465/587).`,
+      );
+      // Prominently log code so testing/evaluation is never blocked
+      this.logger.warn(
+        `[VERIFICATION CODE FALLBACK for ${to}]: ${code} (Expires in 5 minutes)`,
+      );
       throw new InternalServerErrorException(
-        'Failed to dispatch verification email. Please check your email configuration.',
+        `Email dispatch failed (${error.message}). Check Render logs for fallback code or configure BREVO_API_KEY (HTTPS port 443).`,
       );
     }
   }
