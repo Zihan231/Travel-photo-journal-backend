@@ -5,6 +5,7 @@ import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { UsersModule } from './users/users.module.js';
 import { AuthModule } from './auth/auth.module.js';
+import { MailModule } from './mail/mail.module.js';
 import { User } from './users/entities/user.entity.js';
 
 @Module({
@@ -22,7 +23,9 @@ import { User } from './users/entities/user.entity.js';
           configService.get<string>('DB_NAME');
 
         if (!rawDbName) {
-          throw new Error('Database name (DbName / DB_NAME) is not defined in environment variables');
+          throw new Error(
+            'Database name (DbName / DB_NAME) is not defined in environment variables',
+          );
         }
 
         const cleanDbName = rawDbName.replace(/^Database:\s*/i, '').trim();
@@ -32,7 +35,9 @@ import { User } from './users/entities/user.entity.js';
           configService.get<string>('DB_HOST');
 
         if (!host) {
-          throw new Error('Database host (Host / DB_HOST) is not defined in environment variables');
+          throw new Error(
+            'Database host (Host / DB_HOST) is not defined in environment variables',
+          );
         }
 
         const username =
@@ -40,7 +45,9 @@ import { User } from './users/entities/user.entity.js';
           configService.get<string>('DB_USERNAME');
 
         if (!username) {
-          throw new Error('Database user (User / DB_USERNAME) is not defined in environment variables');
+          throw new Error(
+            'Database user (User / DB_USERNAME) is not defined in environment variables',
+          );
         }
 
         const password =
@@ -67,6 +74,7 @@ import { User } from './users/entities/user.entity.js';
     }),
     UsersModule,
     AuthModule,
+    MailModule,
   ],
   controllers: [AppController],
   providers: [AppService],

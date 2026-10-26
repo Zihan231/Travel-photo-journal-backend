@@ -26,6 +26,42 @@ export class User {
   @Column({ type: 'varchar', length: 255, nullable: true })
   avatar: string | null;
 
+  @Column({ type: 'boolean', default: false, name: 'is_email_verified' })
+  isEmailVerified: boolean;
+
+  @Column({
+    type: 'varchar',
+    length: 10,
+    nullable: true,
+    select: false,
+    name: 'verification_code',
+  })
+  verificationCode: string | null;
+
+  @Column({
+    type: 'datetime',
+    nullable: true,
+    select: false,
+    name: 'code_expires_at',
+  })
+  codeExpiresAt: Date | null;
+
+  @Column({
+    type: 'int',
+    default: 0,
+    select: false,
+    name: 'verification_attempts',
+  })
+  verificationAttempts: number;
+
+  @Column({
+    type: 'datetime',
+    nullable: true,
+    select: false,
+    name: 'last_code_sent_at',
+  })
+  lastCodeSentAt: Date | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

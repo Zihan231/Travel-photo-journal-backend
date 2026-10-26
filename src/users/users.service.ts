@@ -26,7 +26,25 @@ export class UsersService {
     return await this.userRepository.findOne({ where: { email } });
   }
 
+  async findByEmailWithAuthDetails(email: string): Promise<User | null> {
+    return await this.userRepository
+      .createQueryBuilder('user')
+      .addSelect([
+        'user.password',
+        'user.verificationCode',
+        'user.codeExpiresAt',
+        'user.verificationAttempts',
+        'user.lastCodeSentAt',
+      ])
+      .where('user.email = :email', { email })
+      .getOne();
+  }
+
   async findById(id: number): Promise<User | null> {
     return await this.userRepository.findOne({ where: { id } });
+  }
+
+  async update(id: number, updateData: Partial<User>): Promise<void> {
+    await this.userRepository.update(id, updateData);
   }
 }
