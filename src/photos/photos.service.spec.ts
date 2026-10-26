@@ -24,9 +24,16 @@ describe('PhotosService', () => {
       deleteImage: vi.fn().mockResolvedValue(undefined),
     };
 
+    const mockAiService = {
+      generateSummary: vi
+        .fn()
+        .mockResolvedValue('A beautiful sunset over Bali beach.'),
+    };
+
     photosService = new PhotosService(
       mockPhotoRepository,
       mockCloudinaryService,
+      mockAiService as any,
     );
   });
 

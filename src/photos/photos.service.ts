@@ -7,6 +7,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Photo } from './entities/photo.entity.js';
 import { CloudinaryService } from '../cloudinary/cloudinary.service.js';
+import { AiService } from '../ai/ai.service.js';
 import { CreatePhotoDto } from './dto/create-photo.dto.js';
 import { UpdatePhotoDto } from './dto/update-photo.dto.js';
 
@@ -24,6 +25,7 @@ export class PhotosService {
     @InjectRepository(Photo)
     private readonly photoRepository: Repository<Photo>,
     private readonly cloudinaryService: CloudinaryService,
+    private readonly aiService: AiService,
   ) {}
 
   async findAll(userId: number): Promise<Photo[]> {
@@ -63,12 +65,17 @@ export class PhotosService {
     const { secureUrl, publicId } =
       await this.cloudinaryService.uploadImage(file, userId);
 
+    const aiSummary = await this.aiService.generateSummary(
+      createPhotoDto.description,
+    );
+
     const photo = this.photoRepository.create({
       name: createPhotoDto.name,
       location: createPhotoDto.location,
       description: createPhotoDto.description,
       imageUrl: secureUrl,
       cloudinaryPublicId: publicId,
+      aiSummary,
       userId,
     });
 
@@ -110,6 +117,9 @@ export class PhotosService {
     }
     if (updatePhotoDto.description !== undefined) {
       photo.description = updatePhotoDto.description;
+      photo.aiSummary = await this.aiService.generateSummary(
+        updatePhotoDto.description,
+      );
     }
 
     return await this.photoRepository.save(photo);

@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module.js';
 import { MailModule } from './mail/mail.module.js';
 import { PhotosModule } from './photos/photos.module.js';
 import { CloudinaryModule } from './cloudinary/cloudinary.module.js';
+import { AiModule } from './ai/ai.module.js';
 import { User } from './users/entities/user.entity.js';
 import { Photo } from './photos/entities/photo.entity.js';
 
@@ -80,6 +81,7 @@ import { Photo } from './photos/entities/photo.entity.js';
     MailModule,
     CloudinaryModule,
     PhotosModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [AppService],

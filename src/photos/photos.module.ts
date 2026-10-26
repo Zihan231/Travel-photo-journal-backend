@@ -4,9 +4,14 @@ import { Photo } from './entities/photo.entity.js';
 import { PhotosService } from './photos.service.js';
 import { PhotosController } from './photos.controller.js';
 import { CloudinaryModule } from '../cloudinary/cloudinary.module.js';
+import { AiModule } from '../ai/ai.module.js';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Photo]), CloudinaryModule],
+  imports: [
+    TypeOrmModule.forFeature([Photo]),
+    CloudinaryModule,
+    AiModule,
+  ],
   controllers: [PhotosController],
   providers: [PhotosService],
   exports: [PhotosService],
