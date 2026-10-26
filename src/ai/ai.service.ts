@@ -17,8 +17,16 @@ export class AiService {
       this.configService.get<string>('OPENROUTER_API_KEY') ||
       this.configService.get<string>('OPEN_ROUTER_API_KEY');
 
-    const model =
-      this.configService.get<string>('OPENROUTER_MODEL') || 'openrouter/free';
+    const configuredModel = this.configService.get<string>('OPENROUTER_MODEL');
+    const fallbackModels = [
+      'dots-studio/dots-3-note-preview:free',
+      'recursive/flint-v1.0:free',
+      'nvidia/nemotron-3.5-lightning:free',
+    ];
+    const models =
+      configuredModel && configuredModel !== 'openrouter/free'
+        ? [configuredModel, ...fallbackModels]
+        : fallbackModels;
 
     if (!apiKey) {
       this.logger.warn(
@@ -37,12 +45,15 @@ export class AiService {
           'X-Title': 'Travel Photo Journal',
         },
         body: JSON.stringify({
-          model,
+          models,
+          reasoning: { effort: 'none' },
+          temperature: 0.3,
+          max_tokens: 300,
           messages: [
             {
               role: 'system',
               content:
-                'You are an AI assistant for a travel photo journal. Generate a clean, captivating 1-2 sentence summary of the provided travel description. Do not include quotes, options, bullet points, or markdown formatting—return only the plain summary text directly.',
+                'You are a direct text summarizer. Generate a clean, captivating 1-2 sentence summary of the provided text, regardless of the topic (whether travel, business, technical, telecom, personal, or general notes). Do not evaluate or comment on the topic, and never output thought processes, reasoning, disclaimers, quotes, or markdown. Return ONLY the direct 1-2 sentence summary.',
             },
             {
               role: 'user',
@@ -61,11 +72,45 @@ export class AiService {
       }
 
       const data: any = await response.json();
-      const summary = data?.choices?.[0]?.message?.content?.trim();
+      let summary = data?.choices?.[0]?.message?.content?.trim() || '';
 
       if (summary) {
-        this.logger.log('AI summary generated successfully.');
-        return summary;
+        // Strip any leaked reasoning or think blocks from reasoning models
+        summary = summary.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+
+        // Discard safety moderation guardrail false positives
+        if (/^User Safety:\s*safe$/i.test(summary)) {
+          return null;
+        }
+
+        // If the model leaked conversational meta-reasoning like 'So we summarize the gig: "..."'
+        const metaSummaryMatch = summary.match(
+          /(?:So we summarize(?: the gig| the text)?|In summary):\s*["“]?([^"”]+)["”]?/i,
+        );
+        if (metaSummaryMatch && metaSummaryMatch[1]) {
+          summary = metaSummaryMatch[1].trim();
+        }
+
+        // Strip conversational prefixes
+        summary = summary
+          .replace(
+            /^(summary|here is a summary of the text|here is the summary):\s*/i,
+            '',
+          )
+          .trim();
+
+        // Strip surrounding quotes
+        if (
+          (summary.startsWith('"') && summary.endsWith('"')) ||
+          (summary.startsWith('“') && summary.endsWith('”'))
+        ) {
+          summary = summary.slice(1, -1).trim();
+        }
+
+        if (summary.length > 0) {
+          this.logger.log('AI summary generated successfully.');
+          return summary;
+        }
       }
 
       return null;

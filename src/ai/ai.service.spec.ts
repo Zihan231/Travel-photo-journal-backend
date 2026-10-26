@@ -69,6 +69,51 @@ describe('AiService', () => {
     expect(result).toBeNull();
   });
 
+  it('should sanitize reasoning blocks, prefixes, and quotes from model responses', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        choices: [
+          {
+            message: {
+              content:
+                '<think>The user gave telecom services not travel. We must summarize...</think>\nSummary: "Professional assistance with Grameenphone services and bulk SMS API integration."',
+            },
+          },
+        ],
+      }),
+    } as any);
+
+    const result = await aiService.generateSummary(
+      'Welcome to my gig! Expert assistance with Grameenphone services, including bulk SMS API integration, recharge.',
+    );
+
+    expect(result).toBe(
+      'Professional assistance with Grameenphone services and bulk SMS API integration.',
+    );
+  });
+
+  it('should clean conversational meta-reasoning leaks if model includes thought debates', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        choices: [
+          {
+            message: {
+              content:
+                'We need to produce a clean summary. But the user gave a gig description. So we summarize the gig: "Expert assistance with Grameenphone services, including bulk SMS API integration, recharge"',
+            },
+          },
+        ],
+      }),
+    } as any);
+
+    const result = await aiService.generateSummary('Telecom gig text');
+    expect(result).toBe(
+      'Expert assistance with Grameenphone services, including bulk SMS API integration, recharge',
+    );
+  });
+
   it('should return null gracefully if fetch throws network error', async () => {
     global.fetch = vi.fn().mockRejectedValue(new Error('Network error'));
 
