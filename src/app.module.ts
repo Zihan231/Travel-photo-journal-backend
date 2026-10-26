@@ -16,53 +16,103 @@ import { Photo } from './photos/entities/photo.entity.js';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
+      envFilePath: process.env.NODE_ENV
+        ? [
+            `.env.${process.env.NODE_ENV}.local`,
+            `.env.${process.env.NODE_ENV}`,
+            '.env',
+          ]
+        : ['.env.local', '.env'],
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
+        const dbUrl =
+          configService.get<string>('DATABASE_URL') ||
+          configService.get<string>('DB_URL');
+
+        if (dbUrl) {
+          // If the connection string points to restricted MySQL 'sys' schema, route to 'travel_photo_journal'
+          const targetUrl = dbUrl.replace(
+            /\/sys(\?.*)?$/i,
+            '/travel_photo_journal$1',
+          );
+
+          const useSsl =
+            configService.get<string>('DB_SSL') === 'true' ||
+            targetUrl.includes('tidbcloud.com');
+
+          const ssl = useSsl
+            ? {
+                minVersion: 'TLSv1.2',
+                rejectUnauthorized: true,
+              }
+            : undefined;
+
+          return {
+            type: 'mysql',
+            url: targetUrl,
+            ssl,
+            entities: [User, Photo],
+            synchronize: true,
+          };
+        }
+
         const rawDbName =
-          configService.get<string>('DbName') ||
-          configService.get<string>('DB_NAME');
+          configService.get<string>('DB_DATABASE') ||
+          configService.get<string>('DB_NAME') ||
+          configService.get<string>('DbName');
 
         if (!rawDbName) {
           throw new Error(
-            'Database name (DbName / DB_NAME) is not defined in environment variables',
+            'Database name (DB_NAME / DB_DATABASE) is not defined in environment variables',
           );
         }
 
         const cleanDbName = rawDbName.replace(/^Database:\s*/i, '').trim();
 
         const host =
-          configService.get<string>('Host') ||
-          configService.get<string>('DB_HOST');
+          configService.get<string>('DB_HOST') ||
+          configService.get<string>('Host');
 
         if (!host) {
           throw new Error(
-            'Database host (Host / DB_HOST) is not defined in environment variables',
+            'Database host (DB_HOST / Host) is not defined in environment variables',
           );
         }
 
         const username =
-          configService.get<string>('User') ||
-          configService.get<string>('DB_USERNAME');
+          configService.get<string>('DB_USERNAME') ||
+          configService.get<string>('DB_USER') ||
+          configService.get<string>('User');
 
         if (!username) {
           throw new Error(
-            'Database user (User / DB_USERNAME) is not defined in environment variables',
+            'Database user (DB_USER / DB_USERNAME) is not defined in environment variables',
           );
         }
 
         const password =
-          configService.get<string>('Password') ??
           configService.get<string>('DB_PASSWORD') ??
+          configService.get<string>('Password') ??
           '';
 
         const port = parseInt(
           configService.get<string>('DB_PORT') || '3306',
           10,
         );
+
+        const useSsl =
+          configService.get<string>('DB_SSL') === 'true' ||
+          host.includes('tidbcloud.com');
+
+        const ssl = useSsl
+          ? {
+              minVersion: 'TLSv1.2',
+              rejectUnauthorized: true,
+            }
+          : undefined;
 
         return {
           type: 'mysql',
@@ -71,6 +121,7 @@ import { Photo } from './photos/entities/photo.entity.js';
           username,
           password,
           database: cleanDbName,
+          ssl,
           entities: [User, Photo],
           synchronize: true,
         };
