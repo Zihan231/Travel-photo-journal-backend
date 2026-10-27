@@ -360,20 +360,6 @@ All `/photos` endpoints are strictly isolated by authenticated user (`req.user.i
   }
   ```
 
----
-
-## Testing & Quality Assurance
-
-```bash
-# Run unit & integration test suites
-npm test
-
-# Run linter
-npm run lint
-
-# Compile TypeScript
-npm run build
-```
 
 ---
 
