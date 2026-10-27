@@ -11,8 +11,7 @@ REST API for the Travel Photo Journal application. Built with NestJS, TypeORM, M
 - **Authentication**: Passport JWT, bcryptjs, TOTP (`otpauth`), QR code generation (`qrcode`), AES-256-GCM secret encryption
 - **File Storage**: Cloudinary SDK (organized per-user folders)
 - **AI Integration**: OpenRouter API (`openrouter/free` or custom LLM)
-- **Email Delivery**: Nodemailer via Brevo SMTP
-- **Testing & Code Quality**: Vitest, Oxlint
+- **Code Quality & Architecture**: Modular NestJS services, strict TypeScript, class-validator DTOs
 
 ---
 
@@ -73,24 +72,32 @@ Create a `.env` file in the root directory:
 PORT=3000
 NODE_ENV=development
 
-# MySQL Database
+# MySQL Database (Local or Individual parameters)
 DB_HOST=127.0.0.1
 DB_PORT=3306
 DB_USER=root
 DB_PASSWORD=
 DB_NAME=travel_photo_journey_orbitwick
 
+# Or Production Database URL (e.g. TiDB Cloud / Render MySQL with automatic SSL):
+# DATABASE_URL=mysql://<user>:<password>@<host>:<port>/travel_photo_journal?ssl={"rejectUnauthorized":true}
+
 # JWT & Security
 JWT_SECRET=your_jwt_secret_key_change_in_production
 JWT_EXPIRES_IN=1h
 TWO_FACTOR_ENCRYPTION_KEY=your_32_character_aes_encryption_key
 
-# Brevo SMTP (Email Verification)
+# Email Delivery (SMTP or Cloud REST API)
+# Option A: Brevo SMTP
 SMTP_HOST=smtp-relay.brevo.com
 SMTP_PORT=587
 SMTP_USER=your_brevo_login
 SMTP_PASS=your_brevo_smtp_key
 EMAIL_FROM="Travel Photo Journal <no-reply@yourdomain.com>"
+
+# Option B: Cloud HTTPS API (Bypasses Render/host outbound SMTP port 587/465 blocks)
+# BREVO_API_KEY=xkeysib-...
+# RESEND_API_KEY=re_...
 
 # Cloudinary Storage
 CLOUDINARY_CLOUD_NAME=your_cloud_name
@@ -126,6 +133,20 @@ The server starts at `http://localhost:3000`.
 ## API Reference
 
 All requests accept and return `application/json` unless marked `multipart/form-data`. Protected routes require the `Authorization: Bearer <token>` header.
+
+### 0. Health Check
+
+#### Health Check & Keep-Alive
+- **`GET /`** or **`GET /health`**
+- **Response (`200 OK`)**:
+  ```json
+  {
+    "status": "ok",
+    "service": "travel-photo-journal-backend",
+    "timestamp": "2026-10-27T04:16:11.584Z",
+    "uptime": 120
+  }
+  ```
 
 ### 1. Authentication & Email Verification
 
@@ -170,7 +191,7 @@ All requests accept and return `application/json` unless marked `multipart/form-
 #### Resend Verification Code
 - **`POST /auth/resend-code`**
 - **Body**: `{ "email": "jane@example.com" }`
-- **Rules**: Enforces a strict 3-minute cooldown between requests.
+- **Rules**: Enforces a strict 60-second cooldown between requests with server-synchronized countdown timer.
 - **Response (`200 OK`)**:
   ```json
   {
